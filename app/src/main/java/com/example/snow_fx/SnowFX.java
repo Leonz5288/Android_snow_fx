@@ -100,8 +100,11 @@ public class SnowFX implements GLSurfaceView.Renderer {
 
         float[] data_stage = new float[num_per_tetromino * 2];
         Random rd = new Random();
-        for (int i = 0; i < data_stage.length; i++) {
-            data_stage[i] = rd.nextFloat();
+        for (int i = 0; i < data_stage.length; i += 2) {
+            float r = 0.08f * (float)Math.sqrt(rd.nextFloat());
+            float theta = rd.nextFloat() * 2f * (float)Math.PI;
+            data_stage[i] = 0.25f + r * (float)Math.cos(theta);
+            data_stage[i+1] = 0.8f + r * (float)Math.sin(theta);
         }
         ball = ByteBuffer.allocateDirect(data_stage.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
         ball.put(data_stage).position(0);
@@ -337,7 +340,7 @@ public class SnowFX implements GLSurfaceView.Renderer {
 
         GLES32.glBindBufferBase(GLES32.GL_SHADER_STORAGE_BUFFER, 0, root_buf);
         // Fill some data to buffers.
-        fillData(new float[]{0.5f, 0.5f, 0.5f, 0.5f});
+        fillData(new float[]{0.5f * 0.5f, 0.5f, 0f, 0f});
         GLES32.glBindBufferBase(GLES32.GL_SHADER_STORAGE_BUFFER, 2, arg_buf);
         GLES32.glBufferData(GLES32.GL_SHADER_STORAGE_BUFFER, 64*5, f_args, GLES32.GL_DYNAMIC_COPY);
 
