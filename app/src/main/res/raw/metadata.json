@@ -1,0 +1,91 @@
+{
+"aot_data": {
+  "kernels": {"drop_staging_tetromino": {
+      "tasks": [{
+          "name": "drop_staging_tetromino_c44_00",
+          "src": "snow_fx/drop_staging_tetromino_c44_00.glsl",
+          "workgroup_size": 1,
+          "num_groups": 1},{
+          "name": "drop_staging_tetromino_c44_01",
+          "src": "snow_fx/drop_staging_tetromino_c44_01.glsl",
+          "workgroup_size": 128,
+          "num_groups": 4},{
+          "name": "drop_staging_tetromino_c44_02",
+          "src": "snow_fx/drop_staging_tetromino_c44_02.glsl",
+          "workgroup_size": 1,
+          "num_groups": 1}],
+      "arg_count": 1,
+      "ret_count": 0,
+      "args_buf_size": 8,
+      "ret_buf_size": 0,
+      "scalar_args": {"0": {
+          "offset_in_bytes_in_args_buf": 0}},
+      "arr_args": {},
+      "used.arr_arg_to_bind_idx": {}},"substep": {
+      "tasks": [{
+          "name": "substep_c42_00",
+          "src": "snow_fx/substep_c42_00.glsl",
+          "workgroup_size": 128,
+          "num_groups": 64},{
+          "name": "substep_c42_01",
+          "src": "snow_fx/substep_c42_01.glsl",
+          "workgroup_size": 1,
+          "num_groups": 1},{
+          "name": "substep_c42_02",
+          "src": "snow_fx/substep_c42_02.glsl",
+          "workgroup_size": 128,
+          "num_groups": 256},{
+          "name": "substep_c42_03",
+          "src": "snow_fx/substep_c42_03.glsl",
+          "workgroup_size": 128,
+          "num_groups": 64},{
+          "name": "substep_c42_04",
+          "src": "snow_fx/substep_c42_04.glsl",
+          "workgroup_size": 128,
+          "num_groups": 256}],
+      "arg_count": 4,
+      "ret_count": 0,
+      "args_buf_size": 32,
+      "ret_buf_size": 0,
+      "scalar_args": {"3": {
+          "offset_in_bytes_in_args_buf": 24},"2": {
+          "offset_in_bytes_in_args_buf": 16},"1": {
+          "offset_in_bytes_in_args_buf": 8},"0": {
+          "offset_in_bytes_in_args_buf": 0}},
+      "arr_args": {},
+      "used.arr_arg_to_bind_idx": {}}},
+  "kernel_tmpls": {},
+  "fields": [{
+      "field_name": "x",
+      "dtype": 5126,
+      "dtype_name": "f32",
+      "mem_offset_in_parent": 233476,
+      "shape": [16384],
+      "is_scalar": false,
+      "row_num": 1,
+      "column_num": 2},{
+      "field_name": "material",
+      "dtype": 5124,
+      "dtype_name": "i32",
+      "mem_offset_in_parent": 36868,
+      "shape": [16384],
+      "is_scalar": true,
+      "row_num": 1,
+      "column_num": 1},{
+      "field_name": "cur_num_particles",
+      "dtype": 5124,
+      "dtype_name": "i32",
+      "mem_offset_in_parent": 0,
+      "shape": [],
+      "is_scalar": true,
+      "row_num": 1,
+      "column_num": 1},{
+      "field_name": "staging_tetromino_x",
+      "dtype": 5126,
+      "dtype_name": "f32",
+      "mem_offset_in_parent": 4,
+      "shape": [512],
+      "is_scalar": false,
+      "row_num": 1,
+      "column_num": 2}],
+  "root_buffer_size": 1019908}}
