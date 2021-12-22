@@ -6,10 +6,40 @@ import android.content.Context;
 import android.content.pm.ConfigurationInfo;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
 
 public class MainActivity extends Activity {
     /** Hold a reference to our GLSurfaceView */
     private GLSurfaceView mGLSurfaceView;
+    private SnowFX snow_renderer;
+
+    private View.OnTouchListener handleTouch = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            int x = (int) event.getX();
+            int y = (int) event.getY();
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    snow_renderer.on_touch = true;
+                    snow_renderer.touch_x = x / 1080f * 0.5f;
+                    snow_renderer.touch_y = 1f - y / 1971f;
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    snow_renderer.touch_x = x / 1080f * 0.5f;
+                    snow_renderer.touch_y = 1f - y / 1971f;
+                    break;
+                case MotionEvent.ACTION_UP:
+                    snow_renderer.on_touch = false;
+                    snow_renderer.touch_x = x / 1080f * 0.5f;
+                    snow_renderer.touch_y = 1f - y / 1971f;
+                    break;
+            }
+            return true;
+        }
+    };
+
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -17,6 +47,10 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         mGLSurfaceView = new GLSurfaceView(this);
+
+        snow_renderer = new SnowFX(mGLSurfaceView.getContext());
+
+        mGLSurfaceView.setOnTouchListener(handleTouch);
 
         // Check if the system supports OpenGL ES 2.0.
         final ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
@@ -30,7 +64,7 @@ public class MainActivity extends Activity {
 
             // Set the renderer to our demo renderer, defined below.
             //mGLSurfaceView.setRenderer(new ExampleCompute(mGLSurfaceView.getContext()));
-            mGLSurfaceView.setRenderer(new SnowFX(mGLSurfaceView.getContext()));
+            mGLSurfaceView.setRenderer(snow_renderer);
         }
         else
         {

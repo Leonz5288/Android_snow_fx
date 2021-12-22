@@ -49,12 +49,23 @@ public class SnowFX implements GLSurfaceView.Renderer {
     private int frame = 0;
     private int last_frame = 0;
 
+    private float last_x;
+    private float last_y;
+    public float touch_x;
+    public float touch_y;
+    public boolean on_touch;
+
     public SnowFX(Context _context) {
         context = _context;
         // Open Json file.
         JSONParser parser = new JSONParser();
         InputStream jsonfile = this.context.getResources().openRawResource(R.raw.metadata);
         JSONObject mpm88;
+        on_touch = false;
+        last_x = 0;
+        last_y = 0;
+        touch_x = 0;
+        touch_y = 0;
         try {
             mpm88 = (JSONObject) parser.parse(new InputStreamReader(jsonfile, "utf-8"));
             jsonfile.close();
@@ -340,7 +351,21 @@ public class SnowFX implements GLSurfaceView.Renderer {
 
         GLES32.glBindBufferBase(GLES32.GL_SHADER_STORAGE_BUFFER, 0, root_buf);
         // Fill some data to buffers.
-        fillData(new float[]{0.5f * 0.5f, 0.5f, 0f, 0f});
+        if (on_touch) {
+            float vx = 0;
+            float vy = 0;
+            if (last_x != -1) {
+                vx = (touch_x - last_x) / (float)2e-3;
+                vy = (touch_y - last_y) / (float)2e-3;
+            }
+            fillData(new float[]{touch_x, touch_y, vx, vy});
+            last_x = touch_x;
+            last_y = touch_y;
+        } else {
+            fillData(new float[]{-100f, -100f, 0f, 0f});
+            last_x = -1;
+            last_y = -1;
+        }
         GLES32.glBindBufferBase(GLES32.GL_SHADER_STORAGE_BUFFER, 2, arg_buf);
         GLES32.glBufferData(GLES32.GL_SHADER_STORAGE_BUFFER, 64*5, f_args, GLES32.GL_DYNAMIC_COPY);
 
