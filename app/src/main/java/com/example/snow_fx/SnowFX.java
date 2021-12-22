@@ -30,10 +30,13 @@ import java.util.stream.Collectors;
 public class SnowFX implements GLSurfaceView.Renderer {
     private Context context;
     private int render_program;
+    private int render_circle_program;
     private int global_tmp_buf;
     private int arg_buf;
     private int color_buf;
     private int root_buf;
+    private int uniform_buf;
+    private int circle_buf;
     private int num_particle = 0;
     private Program[] programs;
     private final String[] kernel_names = {"drop_staging_tetromino", "substep"};
@@ -41,6 +44,8 @@ public class SnowFX implements GLSurfaceView.Renderer {
     private FloatBuffer f_args;
     private FloatBuffer color;
     private FloatBuffer ball;
+    private FloatBuffer uniform;
+    private FloatBuffer circle_data;
     private IntBuffer i_args;
 
     private final int num_per_tetromino = 128 * 4;
@@ -120,6 +125,12 @@ public class SnowFX implements GLSurfaceView.Renderer {
         ball = ByteBuffer.allocateDirect(data_stage.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
         ball.put(data_stage).position(0);
 
+        float[] uniform_data = new float[8];
+        uniform_data[0] = 1080f; uniform_data[1] = 1971f;
+        uniform_data[4] = 0.5f; uniform_data[5] = 0.5f; uniform_data[6] = 0.5f;
+        uniform_data[7] = 200f;
+        uniform = ByteBuffer.allocateDirect(uniform_data.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+        uniform.put(uniform_data).position(0);
     }
 
     @Override
@@ -187,6 +198,10 @@ public class SnowFX implements GLSurfaceView.Renderer {
         global_tmp_buf = temp[0];
         GLES32.glGenBuffers(1, temp, 0);
         root_buf = temp[0];
+        GLES32.glGenBuffers(1, temp, 0);
+        uniform_buf = temp[0];
+        GLES32.glGenBuffers(1, temp, 0);
+        circle_buf = temp[0];
     }
 
 
@@ -243,6 +258,8 @@ public class SnowFX implements GLSurfaceView.Renderer {
     private void compileRenderShaders() {
         int mVertShader = GLES32.glCreateShader(GLES32.GL_VERTEX_SHADER);
         int mFragShader = GLES32.glCreateShader(GLES32.GL_FRAGMENT_SHADER);
+        int mVertCircleShader = GLES32.glCreateShader(GLES32.GL_VERTEX_SHADER);
+        int mFragCircleShader = GLES32.glCreateShader(GLES32.GL_FRAGMENT_SHADER);
         InputStream rawVertShader = this.context.getResources().openRawResource(R.raw.vertshader);
         String stringVertShader = new BufferedReader(
                 new InputStreamReader(rawVertShader, StandardCharsets.UTF_8))
@@ -253,18 +270,31 @@ public class SnowFX implements GLSurfaceView.Renderer {
                 new InputStreamReader(rawFragShader, StandardCharsets.UTF_8))
                 .lines()
                 .collect(Collectors.joining("\n"));
+        InputStream rawVertCircleShader = this.context.getResources().openRawResource(R.raw.vert_circle_shader);
+        String stringVertCircleShader = new BufferedReader(
+                new InputStreamReader(rawVertCircleShader, StandardCharsets.UTF_8))
+                .lines()
+                .collect(Collectors.joining("\n"));
+        InputStream rawFragCircleShader = this.context.getResources().openRawResource(R.raw.frag_circle_shader);
+        String stringFragCircleShader = new BufferedReader(
+                new InputStreamReader(rawFragCircleShader, StandardCharsets.UTF_8))
+                .lines()
+                .collect(Collectors.joining("\n"));
+
         try {
             rawVertShader.close();
             rawFragShader.close();
+            rawVertCircleShader.close();
+            rawFragCircleShader.close();
         } catch (Exception e) {
             System.out.println(e.toString());
             return;
         }
+
         GLES32.glShaderSource(mVertShader, stringVertShader);
         GLES32.glCompileShader(mVertShader);
         final int[] compileStatus = new int[1];
         GLES32.glGetShaderiv(mVertShader, GLES32.GL_COMPILE_STATUS, compileStatus, 0);
-
         // If the compilation failed, delete the shader.
         if (compileStatus[0] == 0)
         {
@@ -275,10 +305,10 @@ public class SnowFX implements GLSurfaceView.Renderer {
         {
             throw new RuntimeException("Error creating vertex shader.");
         }
+
         GLES32.glShaderSource(mFragShader, stringFragShader);
         GLES32.glCompileShader(mFragShader);
         GLES32.glGetShaderiv(mFragShader, GLES32.GL_COMPILE_STATUS, compileStatus, 0);
-
         // If the compilation failed, delete the shader.
         if (compileStatus[0] == 0)
         {
@@ -289,6 +319,35 @@ public class SnowFX implements GLSurfaceView.Renderer {
         {
             throw new RuntimeException("Error creating fragment shader.");
         }
+
+        GLES32.glShaderSource(mVertCircleShader, stringVertCircleShader);
+        GLES32.glCompileShader(mVertCircleShader);
+        GLES32.glGetShaderiv(mVertCircleShader, GLES32.GL_COMPILE_STATUS, compileStatus, 0);
+        // If the compilation failed, delete the shader.
+        if (compileStatus[0] == 0)
+        {
+            GLES32.glDeleteShader(mVertCircleShader);
+            mVertCircleShader = 0;
+        }
+        if (mVertCircleShader == 0)
+        {
+            throw new RuntimeException("Error creating vertex circle shader.");
+        }
+
+        GLES32.glShaderSource(mFragCircleShader, stringFragCircleShader);
+        GLES32.glCompileShader(mFragCircleShader);
+        GLES32.glGetShaderiv(mFragCircleShader, GLES32.GL_COMPILE_STATUS, compileStatus, 0);
+        // If the compilation failed, delete the shader.
+        if (compileStatus[0] == 0)
+        {
+            GLES32.glDeleteShader(mFragCircleShader);
+            mFragCircleShader = 0;
+        }
+        if (mFragCircleShader == 0)
+        {
+            throw new RuntimeException("Error creating vertex circle shader.");
+        }
+
         render_program = GLES32.glCreateProgram();
         if (render_program != 0) {
             GLES32.glAttachShader(render_program, mVertShader);
@@ -308,6 +367,28 @@ public class SnowFX implements GLSurfaceView.Renderer {
         {
             throw new RuntimeException("Error creating program.");
         }
+
+        render_circle_program = GLES32.glCreateProgram();
+        if (render_circle_program != 0) {
+            GLES32.glAttachShader(render_circle_program, mVertCircleShader);
+            GLES32.glAttachShader(render_circle_program, mFragCircleShader);
+            GLES32.glLinkProgram(render_circle_program);
+            final int[] linkStatus = new int[1];
+            GLES32.glGetProgramiv(render_circle_program, GLES32.GL_LINK_STATUS, linkStatus, 0);
+
+            // If the link failed, delete the program.
+            if (linkStatus[0] == 0)
+            {
+                GLES32.glDeleteProgram(render_circle_program);
+                render_circle_program = 0;
+            }
+        }
+        if (render_circle_program == 0)
+        {
+            throw new RuntimeException("Error creating circle program.");
+        }
+
+        int uniformBlockHandler = GLES32.glGetUniformBlockIndex(render_circle_program, "shader_data");
     }
 
     private void fillData(float[] argument) {
@@ -378,6 +459,14 @@ public class SnowFX implements GLSurfaceView.Renderer {
         }
     }
 
+    private void fillCircleData() {
+        float[] data = new float[2];
+        data[0] = touch_x;
+        data[1] = touch_y;
+        circle_data = ByteBuffer.allocateDirect(data.length*4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+        circle_data.put(data).position(0);
+    }
+
     private void render() {
         GLES32.glMemoryBarrier(GLES32.GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 
@@ -395,5 +484,21 @@ public class SnowFX implements GLSurfaceView.Renderer {
         GLES32.glVertexAttribPointer(1, 1, GLES32.GL_UNSIGNED_INT, false, 4, 36868);
 
         GLES32.glDrawArrays(GLES32.GL_POINTS, 0, num_particle);
+
+        if (on_touch) {
+            fillCircleData();
+
+            GLES32.glUseProgram(render_circle_program);
+
+            GLES32.glBindBufferBase(GLES32.GL_UNIFORM_BUFFER, 0, uniform_buf);
+            GLES32.glBufferData(GLES32.GL_UNIFORM_BUFFER, 8*4, uniform, GLES32.GL_STATIC_DRAW);
+
+            GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, circle_buf);
+            GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, 2*4, circle_data, GLES32.GL_DYNAMIC_DRAW);
+            GLES32.glEnableVertexAttribArray(0);
+            GLES32.glVertexAttribPointer(0, 2, GLES32.GL_FLOAT, false, 2*4, 0);
+
+            GLES32.glDrawArrays(GLES32.GL_POINTS, 0, 1);
+        }
     }
 }
