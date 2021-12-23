@@ -141,7 +141,7 @@ public class SnowFX implements GLSurfaceView.Renderer {
     @Override
     public void onDrawFrame(GL10 gl) {
         // Clear color.
-        GLES32.glClearColor(0f, 0f, 0f, 1f);
+        GLES32.glClearColor(0.631373f, 0.180392f, 0.219608f, 1f);
         GLES32.glClear(GLES32.GL_COLOR_BUFFER_BIT);
 
         if (frame - last_frame > 100) {
@@ -387,8 +387,6 @@ public class SnowFX implements GLSurfaceView.Renderer {
         {
             throw new RuntimeException("Error creating circle program.");
         }
-
-        int uniformBlockHandler = GLES32.glGetUniformBlockIndex(render_circle_program, "shader_data");
     }
 
     private void fillData(float[] argument) {
@@ -416,7 +414,10 @@ public class SnowFX implements GLSurfaceView.Renderer {
         GLES32.glBindBufferBase(GLES32.GL_SHADER_STORAGE_BUFFER, 0, root_buf);
         GLES32.glBufferSubData(GLES32.GL_SHADER_STORAGE_BUFFER, 4, num_per_tetromino*2*4, ball);
         // Fill some data to buffers.
-        fillData(new int[]{1});
+        //Random rd = new Random();
+        //int mat = rd.nextInt(8);
+        int mat = 1;
+        fillData(new int[]{mat});
         GLES32.glBindBufferBase(GLES32.GL_SHADER_STORAGE_BUFFER, 2, arg_buf);
         GLES32.glBufferData(GLES32.GL_SHADER_STORAGE_BUFFER, 64*5, i_args, GLES32.GL_DYNAMIC_COPY);
 
