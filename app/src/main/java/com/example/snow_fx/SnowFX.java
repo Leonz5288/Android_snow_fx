@@ -3,8 +3,11 @@ package com.example.snow_fx;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.opengl.GLSurfaceView;
 import android.opengl.GLES32;
+import android.opengl.GLUtils;
 import android.os.Build;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -40,15 +43,19 @@ public class SnowFX implements GLSurfaceView.Renderer {
     private int root_buf;
     private int uniform_buf;
     private int circle_buf;
+    private int texture_buf;
     private int num_particle = 0;
     private Program[] programs;
     private final String[] kernel_names = {"drop_staging_tetromino", "substep"};
+
+    private int texture_handle;
 
     private FloatBuffer f_args;
     private FloatBuffer color;
     private FloatBuffer ball;
     private FloatBuffer uniform;
     private FloatBuffer circle_data;
+    private FloatBuffer texture_coord;
     private IntBuffer i_args;
 
     private final int num_per_tetromino = 128 * 4;
@@ -59,6 +66,8 @@ public class SnowFX implements GLSurfaceView.Renderer {
 
     private int screen_width;
     private int screen_height;
+
+    private Bitmap bitmap;
 
     private float last_x;
     private float last_y;
@@ -75,8 +84,8 @@ public class SnowFX implements GLSurfaceView.Renderer {
         on_touch = false;
         last_x = 0;
         last_y = 0;
-        touch_x = 0;
-        touch_y = 0;
+        touch_x = -100f;
+        touch_y = -100f;
         try {
             mpm88 = (JSONObject) parser.parse(new InputStreamReader(jsonfile, "utf-8"));
             jsonfile.close();
@@ -142,6 +151,22 @@ public class SnowFX implements GLSurfaceView.Renderer {
         uniform_data[7] = 200f;
         uniform = ByteBuffer.allocateDirect(uniform_data.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
         uniform.put(uniform_data).position(0);
+
+        float textureCoordinates[] = {
+                0.0f, 0.0f,
+                1.0f, 0.0f,
+                0.0f, 1.0f,
+                0.0f, 1.0f,
+                1.0f, 0.0f,
+                1.0f, 1.0f
+        };
+        texture_coord = ByteBuffer.allocateDirect(textureCoordinates.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+        texture_coord.put(textureCoordinates).position(0);
+
+        bitmap = BitmapFactory.decodeResource(context.getResources(), R.raw.taichi_thumbup);
+        int[] temp = new int[1];
+        GLES32.glGenTextures(1, temp, 0);
+        texture_handle = temp[0];
     }
 
     @Override
@@ -153,7 +178,10 @@ public class SnowFX implements GLSurfaceView.Renderer {
     public void onDrawFrame(GL10 gl) {
         // Clear color.
         GLES32.glClearColor(0.631373f, 0.180392f, 0.219608f, 1f);
-        GLES32.glClear(GLES32.GL_COLOR_BUFFER_BIT);
+        GLES32.glClear(GLES32.GL_COLOR_BUFFER_BIT | GLES32.GL_DEPTH_BUFFER_BIT);
+        GLES32.glDisable(GLES32.GL_DEPTH_TEST);
+        GLES32.glEnable(GLES32.GL_BLEND);
+        GLES32.glBlendFunc(GLES32.GL_SRC_ALPHA, GLES32.GL_ONE_MINUS_SRC_ALPHA);
 
         if (frame - last_frame > 100) {
             if (num_particle + num_per_tetromino <= max_num_particles) {
@@ -213,6 +241,8 @@ public class SnowFX implements GLSurfaceView.Renderer {
         uniform_buf = temp[0];
         GLES32.glGenBuffers(1, temp, 0);
         circle_buf = temp[0];
+        GLES32.glGenBuffers(1, temp, 0);
+        texture_buf = temp[0];
     }
 
 
@@ -444,21 +474,15 @@ public class SnowFX implements GLSurfaceView.Renderer {
 
         GLES32.glBindBufferBase(GLES32.GL_SHADER_STORAGE_BUFFER, 0, root_buf);
         // Fill some data to buffers.
-        if (on_touch) {
-            float vx = 0;
-            float vy = 0;
-            if (last_x != -1) {
-                vx = (touch_x - last_x) / (float)2e-3;
-                vy = (touch_y - last_y) / (float)2e-3;
-            }
-            fillData(new float[]{touch_x, touch_y, vx, vy});
-            last_x = touch_x;
-            last_y = touch_y;
-        } else {
-            fillData(new float[]{-100f, -100f, 0f, 0f});
-            last_x = -1;
-            last_y = -1;
+        float vx = 0;
+        float vy = 0;
+        if (last_x != -1) {
+            vx = (touch_x - last_x) / (float)2e-3;
+            vy = (touch_y - last_y) / (float)2e-3;
         }
+        fillData(new float[]{touch_x, touch_y, vx, vy});
+        last_x = touch_x;
+        last_y = touch_y;
         GLES32.glBindBufferBase(GLES32.GL_SHADER_STORAGE_BUFFER, 2, arg_buf);
         GLES32.glBufferData(GLES32.GL_SHADER_STORAGE_BUFFER, 64*5, f_args, GLES32.GL_DYNAMIC_COPY);
 
@@ -472,9 +496,15 @@ public class SnowFX implements GLSurfaceView.Renderer {
     }
 
     private void fillCircleData() {
-        float[] data = new float[2];
-        data[0] = touch_x;
-        data[1] = touch_y;
+        float offset = 0.1f;
+        float[] data = {
+                touch_x - offset, touch_y + offset,
+                touch_x + offset, touch_y + offset,
+                touch_x - offset, touch_y - offset,
+                touch_x - offset, touch_y - offset,
+                touch_x + offset, touch_y + offset,
+                touch_x + offset, touch_y - offset,
+        };
         circle_data = ByteBuffer.allocateDirect(data.length*4).order(ByteOrder.nativeOrder()).asFloatBuffer();
         circle_data.put(data).position(0);
     }
@@ -497,20 +527,29 @@ public class SnowFX implements GLSurfaceView.Renderer {
 
         GLES32.glDrawArrays(GLES32.GL_POINTS, 0, num_particle);
 
-        if (on_touch) {
-            fillCircleData();
+        fillCircleData();
 
-            GLES32.glUseProgram(render_circle_program);
+        GLES32.glUseProgram(render_circle_program);
 
-            GLES32.glBindBufferBase(GLES32.GL_UNIFORM_BUFFER, 0, uniform_buf);
-            GLES32.glBufferData(GLES32.GL_UNIFORM_BUFFER, 8*4, uniform, GLES32.GL_STATIC_DRAW);
+        //GLES32.glBindBufferBase(GLES32.GL_UNIFORM_BUFFER, 0, uniform_buf);
+        //GLES32.glBufferData(GLES32.GL_UNIFORM_BUFFER, 8*4, uniform, GLES32.GL_STATIC_DRAW);
 
-            GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, circle_buf);
-            GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, 2*4, circle_data, GLES32.GL_DYNAMIC_DRAW);
-            GLES32.glEnableVertexAttribArray(0);
-            GLES32.glVertexAttribPointer(0, 2, GLES32.GL_FLOAT, false, 2*4, 0);
+        GLES32.glActiveTexture(GLES32.GL_TEXTURE);
+        GLES32.glBindTexture(GLES32.GL_TEXTURE_2D, texture_handle);
+        GLES32.glTexParameterf(GLES32.GL_TEXTURE_2D, GLES32.GL_TEXTURE_MAG_FILTER, GLES32.GL_LINEAR);
+        GLES32.glTexParameterf(GLES32.GL_TEXTURE_2D, GLES32.GL_TEXTURE_MIN_FILTER, GLES32.GL_LINEAR);
+        GLUtils.texImage2D(GLES32.GL_TEXTURE_2D, 0, bitmap, 0);
 
-            GLES32.glDrawArrays(GLES32.GL_POINTS, 0, 1);
-        }
+        GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, circle_buf);
+        GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, 12*4, circle_data, GLES32.GL_DYNAMIC_DRAW);
+        GLES32.glEnableVertexAttribArray(0);
+        GLES32.glVertexAttribPointer(0, 2, GLES32.GL_FLOAT, false, 2*4, 0);
+
+        GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, texture_buf);
+        GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, 12*4, texture_coord, GLES32.GL_STATIC_DRAW);
+        GLES32.glEnableVertexAttribArray(1);
+        GLES32.glVertexAttribPointer(1, 2, GLES32.GL_FLOAT, false, 2*4, 0);
+
+        GLES32.glDrawArrays(GLES32.GL_TRIANGLES, 0, 2*3);
     }
 }
