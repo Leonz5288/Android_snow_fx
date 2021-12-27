@@ -60,12 +60,13 @@ public class SnowFX implements GLSurfaceView.Renderer {
     private final int max_num_particles = 1024 * 16;
 
     private int frame = 0;
-    private int last_frame = 0;
+    private int last_frame = Integer.MAX_VALUE;
 
     private Bitmap bitmap;
 
     public float[] base_data;
     public float[] data_stage;
+
     private float last_x;
     private float last_y;
     public float touch_x;
@@ -171,12 +172,13 @@ public class SnowFX implements GLSurfaceView.Renderer {
         GLES32.glEnable(GLES32.GL_BLEND);
         GLES32.glBlendFunc(GLES32.GL_SRC_ALPHA, GLES32.GL_ONE_MINUS_SRC_ALPHA);
 
-        if (frame - last_frame > 100) {
+        if (release) {
             if (num_particle + num_per_tetromino <= max_num_particles) {
                 drop_staging_tetromino();
                 num_particle += num_per_tetromino;
             }
             last_frame = frame;
+            release = false;
         }
         // Run substep kernel, pass in the number of substep you want to run per frame.
         substep(20);
@@ -304,7 +306,7 @@ public class SnowFX implements GLSurfaceView.Renderer {
 
         GLES32.glDrawArrays(GLES32.GL_POINTS, 0, num_particle);
 
-        if (frame > 0) {
+        if (frame - last_frame > 50) {
             ball = ByteBuffer.allocateDirect(data_stage.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
             ball.put(data_stage).position(0);
             GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, preview_buf);
