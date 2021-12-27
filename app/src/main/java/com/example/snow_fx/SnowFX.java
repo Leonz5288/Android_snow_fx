@@ -1,9 +1,12 @@
 package com.example.snow_fx;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.res.Resources;
 import android.opengl.GLSurfaceView;
 import android.opengl.GLES32;
 import android.os.Build;
+import android.util.DisplayMetrics;
 import android.util.Log;
 
 import androidx.annotation.RequiresApi;
@@ -54,6 +57,9 @@ public class SnowFX implements GLSurfaceView.Renderer {
     private int frame = 0;
     private int last_frame = 0;
 
+    private int screen_width;
+    private int screen_height;
+
     private float last_x;
     private float last_y;
     public float touch_x;
@@ -78,6 +84,11 @@ public class SnowFX implements GLSurfaceView.Renderer {
             Log.e("ERR", "Mpm88Ndarray: exception when parsing json: " + e);
             return;
         }
+
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        screen_height = displayMetrics.heightPixels;
+        screen_width = displayMetrics.widthPixels;
 
         // -----------------------------------------------------------------------------------------
         // Parse Json data.
@@ -126,7 +137,7 @@ public class SnowFX implements GLSurfaceView.Renderer {
         ball.put(data_stage).position(0);
 
         float[] uniform_data = new float[8];
-        uniform_data[0] = 1080f; uniform_data[1] = 1971f;
+        uniform_data[0] = (float) screen_width; uniform_data[1] = (float) screen_height;
         uniform_data[4] = 0.5f; uniform_data[5] = 0.5f; uniform_data[6] = 0.5f;
         uniform_data[7] = 200f;
         uniform = ByteBuffer.allocateDirect(uniform_data.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
