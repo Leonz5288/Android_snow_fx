@@ -22,18 +22,20 @@ public class MainActivity extends Activity {
             int y = (int) event.getY();
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    snow_renderer.on_touch = true;
-                    snow_renderer.touch_x = x / 1080f * 0.5f;
-                    snow_renderer.touch_y = 1f - y / 1971f;
-                    break;
                 case MotionEvent.ACTION_MOVE:
                     snow_renderer.touch_x = x / 1080f * 0.5f;
                     snow_renderer.touch_y = 1f - y / 1971f;
+                    for (int i = 0; i < snow_renderer.base_data.length; i += 2) {
+                        snow_renderer.data_stage[i] = snow_renderer.base_data[i] + snow_renderer.touch_x;
+                    }
                     break;
                 case MotionEvent.ACTION_UP:
-                    snow_renderer.on_touch = false;
+                    snow_renderer.release = true;
                     snow_renderer.touch_x = x / 1080f * 0.5f;
                     snow_renderer.touch_y = 1f - y / 1971f;
+                    for (int i = 0; i < snow_renderer.base_data.length; i += 2) {
+                        snow_renderer.data_stage[i] = snow_renderer.base_data[i] + snow_renderer.touch_x;
+                    }
                     break;
             }
             return true;
