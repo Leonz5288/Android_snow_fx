@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.pm.ConfigurationInfo;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -14,6 +15,8 @@ public class MainActivity extends Activity {
     /** Hold a reference to our GLSurfaceView */
     private GLSurfaceView mGLSurfaceView;
     private SnowFX snow_renderer;
+    private float width;
+    private float height;
 
     private View.OnTouchListener handleTouch = new View.OnTouchListener() {
         @Override
@@ -23,16 +26,16 @@ public class MainActivity extends Activity {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                 case MotionEvent.ACTION_MOVE:
-                    snow_renderer.touch_x = x / 1080f * 0.5f;
-                    snow_renderer.touch_y = 1f - y / 1971f;
+                    snow_renderer.touch_x = x / width * 0.5f;
+                    snow_renderer.touch_y = 1f - y / height;
                     for (int i = 0; i < snow_renderer.base_data.length; i += 2) {
                         snow_renderer.data_stage[i] = snow_renderer.base_data[i] + snow_renderer.touch_x;
                     }
                     break;
                 case MotionEvent.ACTION_UP:
                     snow_renderer.release = true;
-                    snow_renderer.touch_x = x / 1080f * 0.5f;
-                    snow_renderer.touch_y = 1f - y / 1971f;
+                    snow_renderer.touch_x = x / width * 0.5f;
+                    snow_renderer.touch_y = 1f - y / height;
                     for (int i = 0; i < snow_renderer.base_data.length; i += 2) {
                         snow_renderer.data_stage[i] = snow_renderer.base_data[i] + snow_renderer.touch_x;
                     }
@@ -49,6 +52,11 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         mGLSurfaceView = new GLSurfaceView(this);
+
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        ((Activity) mGLSurfaceView.getContext()).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        width = (float) displayMetrics.widthPixels;
+        height = (float) displayMetrics.heightPixels;
 
         snow_renderer = new SnowFX(mGLSurfaceView.getContext());
 
